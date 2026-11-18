@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { INITIAL_REPORTS, MCG_ZONES } from './data/gurugramData';
+import AnalyticsView from './components/AnalyticsView';
 import ReportCard from './components/ReportCard';
 import CivicMap from './components/CivicMap';
 import NewReportModal from './components/NewReportModal';
@@ -368,82 +369,7 @@ export default function App() {
 
         {/* ANALYTICS & WARD LEADERBOARD TAB */}
         {activeTab === 'analytics' && (
-          <div className="space-y-6">
-            <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-200 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-2">
-                <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                    Municipal Corporation of Gurugram (MCG) Accountability Scorecard
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Resolution metric by administrative zone and Joint Commissioner charge
-                  </p>
-                </div>
-                <span className="text-xs font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded-full self-start sm:self-auto border border-rose-100">
-                  Public Scorecard
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {MCG_ZONES.map((zone) => {
-                  const zoneReports = reports.filter(r => r.zoneId === zone.id);
-                  const zoneResolved = zoneReports.filter(r => r.status === 'resolved').length;
-                  const rate = zoneReports.length ? Math.round((zoneResolved / zoneReports.length) * 100) : 0;
-
-                  return (
-                    <div key={zone.id} className="p-4 sm:p-5 rounded-2xl border border-slate-100 bg-slate-50/70 hover:bg-slate-50 transition-colors">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h4 className="font-bold text-slate-900 text-sm sm:text-base">{zone.name}</h4>
-                          <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
-                            {zone.cluster} · Wards: {zone.wards.join(', ')}
-                          </span>
-                        </div>
-                        <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-800 shrink-0">
-                          {rate}% cleared
-                        </span>
-                      </div>
-
-                      <div className="w-full bg-slate-200 h-2 rounded-full mt-3.5 overflow-hidden">
-                        <div 
-                          className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
-                          style={{ width: `${rate}%` }}
-                        />
-                      </div>
-
-                      <div className="mt-3.5 pt-3.5 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
-                        <div>
-                          <span className="text-slate-400 block font-medium">Joint Commissioner:</span>
-                          <span className="font-semibold text-slate-700">{zone.jointCommissioner}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-slate-400 block font-medium">Open Issues:</span>
-                          <span className="font-bold text-rose-600">{zoneReports.length - zoneResolved}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Citizen Callout */}
-            <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 to-slate-800 text-white flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div>
-                <h4 className="font-bold text-base">Notice a spot in your sector?</h4>
-                <p className="text-xs text-slate-300 mt-1 max-w-lg">
-                  Every submission is logged under the respective MCG Ward official and shared with resident welfare associations (RWAs).
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenReportModal}
-                className="shrink-0 bg-white text-slate-900 font-bold px-5 py-2.5 rounded-full text-xs hover:bg-slate-100 transition-colors cursor-pointer"
-              >
-                Log New Hazard Now
-              </button>
-            </div>
-          </div>
+          <AnalyticsView reports={reports} />
         )}
       </main>
 

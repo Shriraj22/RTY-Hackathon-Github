@@ -8,6 +8,8 @@ export const MCG_ZONES = [
     jointCommissioner: "Sh. Akhil Pilani, HCS",
     contactPhone: "+91 124 2370601",
     email: "jc1.mcg@hry.gov.in",
+    mlaName: "Mukesh Sharma (Gurgaon Assembly)",
+    mlaParty: "BJP",
     keyAreas: ["Sadar Bazar", "Sector 14", "Sector 15", "Railway Station Road", "Old Subhash Nagar"]
   },
   {
@@ -18,6 +20,8 @@ export const MCG_ZONES = [
     jointCommissioner: "Smt. Manisha Sharma, HCS",
     contactPhone: "+91 124 2394502",
     email: "jc2.mcg@hry.gov.in",
+    mlaName: "Rao Narbir Singh (Badshahpur Assembly)",
+    mlaParty: "BJP",
     keyAreas: ["DLF Phase 1-3", "MG Road", "Cyber City", "Udyog Vihar", "Sikanderpur", "Chakkarpur"]
   },
   {
@@ -28,6 +32,8 @@ export const MCG_ZONES = [
     jointCommissioner: "Sh. Pradeep Kumar, HCS",
     contactPhone: "+91 124 2381203",
     email: "jc3.mcg@hry.gov.in",
+    mlaName: "Rao Narbir Singh (Badshahpur Assembly)",
+    mlaParty: "BJP",
     keyAreas: ["Golf Course Road", "Sector 54", "Sector 56", "Sector 57", "Sushant Lok 2-3", "Wazirabad"]
   },
   {
@@ -38,6 +44,8 @@ export const MCG_ZONES = [
     jointCommissioner: "Sh. Vijay Yadav, HCS",
     contactPhone: "+91 124 2362404",
     email: "jc4.mcg@hry.gov.in",
+    mlaName: "Mukesh Sharma (Gurgaon Assembly)",
+    mlaParty: "BJP",
     keyAreas: ["Dwarka Expressway", "Sector 102-106", "Palam Vihar", "Carterpuri", "Bajghera"]
   },
   {
@@ -48,6 +56,8 @@ export const MCG_ZONES = [
     jointCommissioner: "Dr. Naresh Kumar, HCS",
     contactPhone: "+91 124 2351505",
     email: "jc5.mcg@hry.gov.in",
+    mlaName: "Rao Narbir Singh (Badshahpur Assembly)",
+    mlaParty: "BJP",
     keyAreas: ["Sohna Road", "Sector 47", "Sector 48", "Sector 49", "South City 2", "Tigra"]
   },
   {
@@ -58,6 +68,8 @@ export const MCG_ZONES = [
     jointCommissioner: "Sh. Ajay Kumar, HCS",
     contactPhone: "+91 124 2341606",
     email: "jc6.mcg@hry.gov.in",
+    mlaName: "Laxman Singh Yadav (Pataudi Assembly)",
+    mlaParty: "BJP",
     keyAreas: ["Sector 82", "Sector 84", "Sector 90", "Kherki Daula", "Narsinghpur Highway", "Sector 37D"]
   }
 ];
@@ -199,4 +211,23 @@ export const GURUGRAM_SECTORS = [
   { sector: "Palam Vihar / Sec 21-23", ward: 2, zoneId: "zone-4", defaultCoords: [28.5112, 77.0415] },
   { sector: "Sector 82 & Vatika India Next", ward: 21, zoneId: "zone-6", defaultCoords: [28.3892, 76.9681] },
   { sector: "Sector 84 & Kherki Daula", ward: 22, zoneId: "zone-6", defaultCoords: [28.3982, 76.9741] }
+];
+
+// Rich Ward Analytics Breakdown for all 36 MCG Wards
+export const WARD_PERFORMANCE_METRICS = [
+  { ward: 10, name: "DLF Phase 3 & Sikanderpur", zoneId: "zone-2", mla: "Rao Narbir Singh", totalReports: 42, open: 28, resolved: 14, rate: 33, stale7d: 18, stale14d: 11, stale30d: 4, avgResolutionHours: 72 },
+  { ward: 33, name: "Sector 56 & Golf Course Extn", zoneId: "zone-3", mla: "Rao Narbir Singh", totalReports: 38, open: 24, resolved: 14, rate: 37, stale7d: 15, stale14d: 9, stale30d: 3, avgResolutionHours: 64 },
+  { ward: 26, name: "Sector 47 & Subhash Chowk", zoneId: "zone-5", mla: "Rao Narbir Singh", totalReports: 31, open: 18, resolved: 13, rate: 42, stale7d: 12, stale14d: 7, stale30d: 2, avgResolutionHours: 58 },
+  { ward: 14, name: "Sector 14 & Old Gurugram", zoneId: "zone-1", mla: "Mukesh Sharma", totalReports: 29, open: 11, resolved: 18, rate: 62, stale7d: 6, stale14d: 3, stale30d: 1, avgResolutionHours: 36 },
+  { ward: 4, name: "Dwarka Expressway / Sec 104", zoneId: "zone-4", mla: "Mukesh Sharma", totalReports: 26, open: 19, resolved: 7, rate: 27, stale7d: 14, stale14d: 8, stale30d: 5, avgResolutionHours: 96 },
+  { ward: 22, name: "Sector 84 & Kherki Daula", zoneId: "zone-6", mla: "Laxman Singh Yadav", totalReports: 24, open: 17, resolved: 7, rate: 29, stale7d: 13, stale14d: 7, stale30d: 3, avgResolutionHours: 88 },
+  { ward: 28, name: "DLF Phase 1 & Golf Course Rd", zoneId: "zone-2", mla: "Rao Narbir Singh", totalReports: 22, open: 8, resolved: 14, rate: 64, stale7d: 4, stale14d: 2, stale30d: 0, avgResolutionHours: 28 },
+  { ward: 15, name: "Sector 15 & Sadar Bazar", zoneId: "zone-1", mla: "Mukesh Sharma", totalReports: 20, open: 9, resolved: 11, rate: 55, stale7d: 5, stale14d: 2, stale30d: 1, avgResolutionHours: 42 }
+];
+
+export const REPEAT_HOTSPOTS = [
+  { id: "hs-1", location: "Sikanderpur Metro Station Underpass", ward: 10, category: "Commercial Plastic & Food Garbage", count: 18, unresolved: 14, worstTime: "Daily 8 AM - 11 AM", official: "Sanitary Inspector Ward 10" },
+  { id: "hs-2", location: "Sector 56 Huda Market Roundabout", ward: 33, category: "Asphalt Cratering & Deep Potholes", count: 14, unresolved: 11, worstTime: "Post-rain / Heavy traffic", official: "EE Roads Zone 3" },
+  { id: "hs-3", location: "Subhash Chowk Service Lane (Sector 47)", ward: 26, category: "Drainage Overflow & Cave-in", count: 12, unresolved: 8, worstTime: "Evening peak", official: "GMDA Infra Cell" },
+  { id: "hs-4", location: "Dwarka Expressway Sector 104 Green Belt", ward: 4, category: "Midnight C&D Debris Dumping", count: 11, unresolved: 9, worstTime: "Midnight 12 AM - 4 AM", official: "Enforcement Wing Zone 4" }
 ];
