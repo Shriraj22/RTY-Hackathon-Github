@@ -40,14 +40,13 @@ export default function AuthModal({ isOpen, onClose }) {
         {/* Header */}
         <div className="p-6 pb-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-600"></span>
-              <h3 className="font-extrabold text-slate-900 text-lg">
-                {isSignUp ? 'Join MargDarshak' : 'Welcome Back'}
-              </h3>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-slate-900 text-lg">
+                {isSignUp ? 'Join CiviQ' : 'Welcome to CiviQ'}
+              </span>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              {isSignUp ? 'Create an account to report & track civic hazards' : 'Sign in to file reports and upvote issues'}
+              {isSignUp ? 'Create an account to report & investigate civic hazards' : 'Sign in to file reports and upvote issues'}
             </p>
           </div>
           <button

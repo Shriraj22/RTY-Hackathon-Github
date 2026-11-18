@@ -21,6 +21,7 @@ import CivicMap from './components/CivicMap';
 import NewReportModal from './components/NewReportModal';
 import ReportDetailModal from './components/ReportDetailModal';
 import AuthModal from './components/AuthModal';
+import CiviQLogo from './components/CiviQLogo';
 import { useAuth } from './context/AuthContext';
 
 export default function App() {
@@ -126,21 +127,14 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
           {/* Brand */}
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-rose-600 via-rose-500 to-amber-500 text-white flex items-center justify-center font-black text-lg sm:text-xl shadow-md shadow-rose-500/20">
-              M
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h1 className="font-extrabold text-slate-900 tracking-tight text-sm sm:text-lg">
-                  MargDarshak <span className="text-rose-600">Gurugram</span>
-                </h1>
-                <span className="text-[9px] sm:text-[10px] bg-slate-100 font-mono text-slate-600 px-1.5 py-0.5 rounded font-bold border border-slate-200">
-                  MCG 36 Wards
-                </span>
-              </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 hidden md:block">
-                Citizen accountability portal for Gurugram garbage black spots & road hazards
-              </p>
+            <CiviQLogo size="md" />
+            <div className="hidden xs:flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Gurugram
+              </span>
+              <span className="text-[9px] sm:text-[10px] bg-slate-100 font-mono text-slate-600 px-1.5 py-0.5 rounded font-bold border border-slate-200">
+                MCG 36 Wards
+              </span>
             </div>
           </div>
 
