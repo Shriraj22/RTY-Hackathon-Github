@@ -1,9 +1,9 @@
 {
-  "team_name": "CHANGE_ME",
-  "project_title": "CHANGE_ME",
-  "one_liner": "CHANGE_ME: one sentence about what you're building",
-  "track": "CHANGE_ME: physical-world | ai-agents | area-of-expertise",
+  "team_name": "GurugramCivic",
+  "project_title": "MargDarshak Gurugram",
+  "one_liner": "Civic grievance tracker pinpointing Gurugram road hazards & garbage blackspots mapped to MCG zones and officials for public accountability.",
+  "track": "physical-world",
   "members": [
-    { "name": "CHANGE_ME", "github": "CHANGE_ME" }
+    { "name": "Shriraj Deshmukh", "github": "Shriraj22" }
   ]
 }
