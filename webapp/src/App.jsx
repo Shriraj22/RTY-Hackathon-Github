@@ -12,11 +12,13 @@ import {
   LogIn,
   LogOut,
   User,
-  Sparkles
+  Sparkles,
+  Flame,
+  HardHat,
+  Car
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { INITIAL_REPORTS, MCG_ZONES } from './data/gurugramData';
-import AnalyticsView from './components/AnalyticsView';
 import ReportCard from './components/ReportCard';
 import CivicMap from './components/CivicMap';
 import NewReportModal from './components/NewReportModal';
@@ -24,6 +26,7 @@ import ReportDetailModal from './components/ReportDetailModal';
 import VerificationModal from './components/VerificationModal';
 import DisputeModal from './components/DisputeModal';
 import AuthModal from './components/AuthModal';
+import AnalyticsView from './components/AnalyticsView';
 import CiviQLogo from './components/CiviQLogo';
 import { useAuth } from './context/AuthContext';
 
@@ -31,13 +34,20 @@ export default function App() {
   const { user, signOut, isSupabaseConfigured } = useAuth();
 
   const [reports, setReports] = useState(() => {
-    const saved = localStorage.getItem('margdarshak_reports');
-    return saved ? JSON.parse(saved) : INITIAL_REPORTS;
+    // Always use full 110 initial dataset if storage is small
+    const saved = localStorage.getItem('civiq_reports_v2');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.length >= 100) return parsed;
+    }
+    return INITIAL_REPORTS;
   });
 
-  const [activeTab, setActiveTab] = useState('feed'); // 'feed' | 'map' | 'analytics'
-  const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'garbage' | 'pothole'
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'resolved'
+  // Main UI Mode Switch: 'all' | 'garbage' | 'roads' | 'analytics'
+  const [activeDomain, setActiveDomain] = useState('garbage'); // Default focused on Solid Waste or Roads
+  const [activeView, setActiveView] = useState('feed'); // 'feed' | 'map'
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [severityFilter, setSeverityFilter] = useState('all');
   const [zoneFilter, setZoneFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -55,7 +65,7 @@ export default function App() {
 
   // Sync to local storage
   useEffect(() => {
-    localStorage.setItem('margdarshak_reports', JSON.stringify(reports));
+    localStorage.setItem('civiq_reports_v2', JSON.stringify(reports));
   }, [reports]);
 
   // Handlers
@@ -66,9 +76,9 @@ export default function App() {
     };
     setReports(prev => [reportWithUser, ...prev]);
     confetti({
-      particleCount: 60,
-      spread: 70,
-      origin: { y: 0.7 }
+      particleCount: 70,
+      spread: 75,
+      origin: { y: 0.65 }
     });
   };
 
@@ -93,7 +103,6 @@ export default function App() {
     }
   };
 
-  // Verification Handler (Before / After Photo Proof)
   const handleCompleteVerification = (verificationData) => {
     setReports(prev => prev.map(r => {
       if (r.id === verificationData.reportId) {
@@ -131,7 +140,6 @@ export default function App() {
     });
   };
 
-  // Dispute Handler
   const handleCompleteDispute = (disputeData) => {
     setReports(prev => prev.map(r => {
       if (r.id === disputeData.reportId) {
@@ -159,7 +167,6 @@ export default function App() {
     }
   };
 
-  // "I Saw This Too" Handler (Reference Core Feature)
   const handleSawThisToo = (id) => {
     const nextSeen = !seenReports[id];
     setSeenReports(prev => {
@@ -183,68 +190,97 @@ export default function App() {
     }
   };
 
-  // Filtered reports
-  const filteredReports = reports.filter(r => {
-    if (typeFilter !== 'all' && r.type !== typeFilter) return false;
+  // Filtered reports based on activeDomain (Garbage vs Roads)
+  const domainReports = reports.filter(r => {
+    if (activeDomain === 'garbage') return r.type === 'garbage';
+    if (activeDomain === 'roads') return r.type === 'pothole';
+    return true;
+  });
+
+  const filteredReports = domainReports.filter(r => {
     if (statusFilter === 'active' && r.status === 'resolved') return false;
     if (statusFilter === 'resolved' && r.status !== 'resolved') return false;
+    if (severityFilter !== 'all' && r.severity !== severityFilter) return false;
     if (zoneFilter !== 'all' && r.zoneId !== zoneFilter) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchText = `${r.title} ${r.landmark} ${r.sector} ${r.officialAssigned}`.toLowerCase();
+      const matchText = `${r.title} ${r.landmark} ${r.sector} ${r.officialAssigned} ${r.contractorAssigned || ''}`.toLowerCase();
       if (!matchText.includes(q)) return false;
     }
     return true;
   });
 
-  // Calculate statistics
-  const totalReports = reports.length;
-  const garbageCount = reports.filter(r => r.type === 'garbage').length;
-  const potholeCount = reports.filter(r => r.type === 'pothole').length;
-  const resolvedCount = reports.filter(r => r.status === 'resolved').length;
-  const resolutionRate = Math.round((resolvedCount / (totalReports || 1)) * 100);
+  // Domain-specific Severity tiers
+  const currentSeverityOptions = activeDomain === 'garbage' ? [
+    { id: 'all', label: 'All Severities' },
+    { id: 'small', label: 'Minor Litter (<1m²)' },
+    { id: 'medium', label: 'Moderate Heap' },
+    { id: 'large', label: 'Severe Obstruction' },
+    { id: 'massive', label: 'Critical Dump (Plot/Road)' }
+  ] : [
+    { id: 'all', label: 'All Severities' },
+    { id: 'small', label: 'Surface Cracks' },
+    { id: 'medium', label: '4-6 inch Crater' },
+    { id: 'large', label: 'Rim/Axle Hazard' },
+    { id: 'massive', label: 'Lethal Road Cave-in' }
+  ];
+
+  // Counts
+  const totalInDomain = domainReports.length;
+  const resolvedInDomain = domainReports.filter(r => r.status === 'resolved').length;
+  const openInDomain = totalInDomain - resolvedInDomain;
+  const rateInDomain = Math.round((resolvedInDomain / (totalInDomain || 1)) * 100);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans pb-20 md:pb-0">
-      {/* Top Banner & Header - Fully Responsive */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans pb-24 md:pb-6 antialiased selection:bg-rose-500 selection:text-white">
+      
+      {/* Dynamic Background Glow Effect */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className={`absolute -top-40 -left-40 w-96 h-96 rounded-full blur-[128px] opacity-25 transition-colors duration-700 ${
+          activeDomain === 'garbage' ? 'bg-rose-600' : (activeDomain === 'roads' ? 'bg-amber-500' : 'bg-blue-600')
+        }`} />
+        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-purple-600/15 rounded-full blur-[140px]" />
+      </div>
+
+      {/* Top Banner & Main Nav */}
+      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-xl border-b border-slate-800 shadow-2xl">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          
           {/* Brand */}
-          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-3">
             <CiviQLogo size="md" />
-            <div className="hidden xs:flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                Gurugram
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold tracking-widest text-slate-400 uppercase bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700">
+                GURUGRAM CIVIC AUDIT
               </span>
-              <span className="text-[9px] sm:text-[10px] bg-slate-100 font-mono text-slate-600 px-1.5 py-0.5 rounded font-bold border border-slate-200">
-                MCG 36 Wards
+              <span className="text-xs text-slate-500">
+                110+ Active Ground Hazards
               </span>
             </div>
           </div>
 
-          {/* User & Action Controls */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* User & Report Trigger */}
+          <div className="flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-2">
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-xs font-medium text-slate-700">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-full text-xs font-semibold text-slate-200 border border-slate-700">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   <span className="max-w-[120px] truncate">{user.user_metadata?.full_name || user.email}</span>
                 </div>
                 <button
                   type="button"
                   onClick={signOut}
-                  className="p-2 sm:px-3 sm:py-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  className="p-2 sm:px-3 sm:py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                   title="Sign Out"
                 >
                   <LogOut size={16} />
-                  <span className="hidden sm:inline">Logout</span>
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => setIsAuthModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 active:scale-95 transition-all cursor-pointer"
               >
                 <LogIn size={14} />
                 <span>Citizen Sign In</span>
@@ -254,137 +290,158 @@ export default function App() {
             <button
               type="button"
               onClick={handleOpenReportModal}
-              className="inline-flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-semibold text-xs sm:text-sm px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full shadow-sm shadow-rose-600/20 transition-all cursor-pointer shrink-0"
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 hover:from-rose-500 hover:to-amber-400 active:scale-95 text-white font-extrabold text-xs sm:text-sm px-4 py-2.5 rounded-full shadow-lg shadow-rose-600/30 transition-all cursor-pointer shrink-0"
             >
               <Plus size={16} />
-              <span className="hidden xs:inline">Report Hazard</span>
-              <span className="xs:hidden">Report</span>
+              <span>Report Hazard</span>
             </button>
           </div>
         </div>
 
-        {/* Navigation tabs */}
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 border-t border-slate-100 flex items-center gap-4 sm:gap-8 text-xs font-semibold text-slate-600 overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => setActiveTab('feed')}
-            className={`py-2.5 border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-colors ${
-              activeTab === 'feed' ? 'border-rose-600 text-rose-600' : 'border-transparent hover:text-slate-900'
-            }`}
-          >
-            <ListFilter size={14} />
-            Feed & List ({filteredReports.length})
-          </button>
+        {/* DOMAIN SEPARATION BAR: Garbage Blackspots vs. Road & Potholes UI */}
+        <div className="max-w-7xl mx-auto px-4 border-t border-slate-800/80 flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
+          
+          {/* Primary Domain Switcher */}
+          <div className="flex items-center gap-2 py-2">
+            <button
+              onClick={() => { setActiveDomain('garbage'); setActiveView('feed'); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+                activeDomain === 'garbage'
+                  ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30 border border-rose-400/50'
+                  : 'bg-slate-800/70 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+              }`}
+            >
+              <Trash2 size={15} />
+              <span>Garbage & Waste ({reports.filter(r => r.type === 'garbage').length})</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab('map')}
-            className={`py-2.5 border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-colors ${
-              activeTab === 'map' ? 'border-rose-600 text-rose-600' : 'border-transparent hover:text-slate-900'
-            }`}
-          >
-            <Map size={14} />
-            Google Maps View
-          </button>
+            <button
+              onClick={() => { setActiveDomain('roads'); setActiveView('feed'); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+                activeDomain === 'roads'
+                  ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/30 border border-amber-300'
+                  : 'bg-slate-800/70 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+              }`}
+            >
+              <AlertTriangle size={15} />
+              <span>Roads & Potholes ({reports.filter(r => r.type === 'pothole').length})</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab('analytics')}
-            className={`py-2.5 border-b-2 flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-colors ${
-              activeTab === 'analytics' ? 'border-rose-600 text-rose-600' : 'border-transparent hover:text-slate-900'
-            }`}
-          >
-            <BarChart3 size={14} />
-            MCG Scorecard & Wards
-          </button>
+            <button
+              onClick={() => setActiveDomain('analytics')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer ${
+                activeDomain === 'analytics'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 border border-blue-400/50'
+                  : 'bg-slate-800/70 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+              }`}
+            >
+              <BarChart3 size={15} />
+              <span>Audit & Analytics</span>
+            </button>
+          </div>
+
+          {/* Sub-view toggle (List vs Map) when in domain */}
+          {activeDomain !== 'analytics' && (
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+              <button
+                onClick={() => setActiveView('feed')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeView === 'feed' ? 'bg-slate-800 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                List Feed
+              </button>
+              <button
+                onClick={() => setActiveView('map')}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeView === 'map' ? 'bg-slate-800 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Live Map
+              </button>
+            </div>
+          )}
+
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 flex-1">
+      {/* Main Content Area */}
+      <main className="max-w-7xl w-full mx-auto px-4 py-6 flex-1 z-10">
         
-        {/* Global Civic Stats Summary */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 mb-5 sm:mb-6">
-          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
-            <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Tracked</span>
-            <span className="text-lg sm:text-2xl font-extrabold text-slate-900 mt-0.5 block">{totalReports} Issues</span>
-            <span className="text-[10px] text-slate-500">Across 6 MCG Zones</span>
-          </div>
+        {/* DOMAIN KPI BANNER */}
+        {activeDomain !== 'analytics' && (
+          <div className="mb-6 p-5 sm:p-6 rounded-3xl bg-slate-900/80 border border-slate-800/80 shadow-xl backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`w-3 h-3 rounded-full animate-ping ${activeDomain === 'garbage' ? 'bg-rose-500' : 'bg-amber-400'}`} />
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400">
+                  {activeDomain === 'garbage' ? 'MCG Solid Waste Tracking' : 'Road Development Cell (RDC) & GMDA'}
+                </span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
+                {activeDomain === 'garbage' ? 'Gurugram Garbage Black Spots & Waste Dumps' : 'Gurugram Potholes & Road Infra Hazards'}
+              </h2>
+              <p className="text-xs text-slate-400 mt-1 max-w-xl">
+                {activeDomain === 'garbage' 
+                  ? 'Tracking illicit midnight dumping, secondary garbage bin overflow, and concessionaire accountability across all 36 wards.'
+                  : 'Monitoring asphalt cave-ins, deep crater hazards, and civil repair contractor SLAs across master and internal sector roads.'}
+              </p>
+            </div>
 
-          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
-            <span className="text-[10px] sm:text-[11px] font-bold text-rose-500 uppercase tracking-wider block flex items-center gap-1">
-              <Trash2 size={12} /> Garbage Spots
-            </span>
-            <span className="text-lg sm:text-2xl font-extrabold text-slate-900 mt-0.5 block">{garbageCount}</span>
-            <span className="text-[10px] text-slate-500">Illegal dump points</span>
+            <div className="grid grid-cols-3 gap-3 shrink-0">
+              <div className="px-4 py-2.5 bg-slate-950/60 rounded-2xl border border-slate-800 text-center">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Tracked</span>
+                <span className="text-xl sm:text-2xl font-black text-white font-mono mt-0.5 block">{totalInDomain}</span>
+              </div>
+              <div className="px-4 py-2.5 bg-slate-950/60 rounded-2xl border border-slate-800 text-center">
+                <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider block">Open Action</span>
+                <span className="text-xl sm:text-2xl font-black text-rose-400 font-mono mt-0.5 block">{openInDomain}</span>
+              </div>
+              <div className="px-4 py-2.5 bg-slate-950/60 rounded-2xl border border-slate-800 text-center">
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">Resolution</span>
+                <span className="text-xl sm:text-2xl font-black text-emerald-400 font-mono mt-0.5 block">{rateInDomain}%</span>
+              </div>
+            </div>
           </div>
+        )}
 
-          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
-            <span className="text-[10px] sm:text-[11px] font-bold text-amber-600 uppercase tracking-wider block flex items-center gap-1">
-              <AlertTriangle size={12} /> Potholes & Craters
-            </span>
-            <span className="text-lg sm:text-2xl font-extrabold text-slate-900 mt-0.5 block">{potholeCount}</span>
-            <span className="text-[10px] text-slate-500">Road infra hazards</span>
-          </div>
-
-          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
-            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-600 uppercase tracking-wider block flex items-center gap-1">
-              <ShieldCheck size={12} /> MCG Action Rate
-            </span>
-            <span className="text-lg sm:text-2xl font-extrabold text-slate-900 mt-0.5 block">{resolutionRate}%</span>
-            <span className="text-[10px] text-emerald-600 font-medium">{resolvedCount} cleared so far</span>
-          </div>
-        </section>
-
-        {/* FEED TAB */}
-        {activeTab === 'feed' && (
-          <div className="space-y-4 sm:space-y-5">
-            {/* Filter controls */}
-            <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+        {/* FEED VIEW (Garbage or Roads) */}
+        {activeDomain !== 'analytics' && activeView === 'feed' && (
+          <div className="space-y-5">
+            
+            {/* Filter Deck */}
+            <div className="p-4 bg-slate-900/80 rounded-2xl border border-slate-800/80 shadow-md backdrop-blur-md flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+              
               {/* Search */}
               <div className="relative flex-1">
-                <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by sector, landmark, or official..."
-                  className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-rose-500"
+                  placeholder="Search by sector, landmark, inspector, or contractor..."
+                  className="w-full pl-9 pr-3.5 py-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
                 />
               </div>
 
-              {/* Category Pills & Dropdowns */}
+              {/* Severity & Status & Zone Selectors */}
               <div className="flex flex-wrap items-center gap-2">
-                <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-semibold w-full sm:w-auto justify-between sm:justify-start">
-                  <button
-                    onClick={() => setTypeFilter('all')}
-                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition-all ${
-                      typeFilter === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('garbage')}
-                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition-all ${
-                      typeFilter === 'garbage' ? 'bg-white text-rose-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    Garbage
-                  </button>
-                  <button
-                    onClick={() => setTypeFilter('pothole')}
-                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg transition-all ${
-                      typeFilter === 'pothole' ? 'bg-white text-amber-600 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    Potholes
-                  </button>
-                </div>
+                <select
+                  value={severityFilter}
+                  onChange={(e) => setSeverityFilter(e.target.value)}
+                  className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 focus:outline-none focus:border-slate-600"
+                >
+                  {currentSeverityOptions.map(opt => (
+                    <option key={opt.id} value={opt.id}>{opt.label}</option>
+                  ))}
+                </select>
 
                 <select
                   value={zoneFilter}
                   onChange={(e) => setZoneFilter(e.target.value)}
-                  className="flex-1 sm:flex-initial px-3 py-2 bg-slate-100 border border-transparent rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:border-slate-300"
+                  className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 focus:outline-none focus:border-slate-600"
                 >
-                  <option value="all">All MCG Zones</option>
+                  <option value="all">All 6 MCG Zones</option>
                   {MCG_ZONES.map(z => (
                     <option key={z.id} value={z.id}>{z.name}</option>
                   ))}
@@ -393,28 +450,29 @@ export default function App() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="flex-1 sm:flex-initial px-3 py-2 bg-slate-100 border border-transparent rounded-xl text-xs font-semibold text-slate-700 focus:bg-white focus:outline-none focus:border-slate-300"
+                  className="px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 focus:outline-none focus:border-slate-600"
                 >
                   <option value="all">All Statuses</option>
                   <option value="active">Active Only</option>
-                  <option value="resolved">Resolved</option>
+                  <option value="resolved">Verified Cleared</option>
                 </select>
               </div>
+
             </div>
 
-            {/* Reports Grid */}
+            {/* Incident Cards Grid */}
             {filteredReports.length === 0 ? (
-              <div className="bg-white p-12 text-center rounded-3xl border border-slate-200">
-                <p className="text-slate-500 text-sm">No civic complaints match your filters.</p>
+              <div className="bg-slate-900/60 p-12 text-center rounded-3xl border border-slate-800">
+                <p className="text-slate-400 text-sm">No civic hazards match your active filters.</p>
                 <button
-                  onClick={() => { setTypeFilter('all'); setStatusFilter('all'); setZoneFilter('all'); setSearchQuery(''); }}
-                  className="mt-3 text-xs font-semibold text-rose-600 hover:underline cursor-pointer"
+                  onClick={() => { setStatusFilter('all'); setSeverityFilter('all'); setZoneFilter('all'); setSearchQuery(''); }}
+                  className="mt-3 text-xs font-bold text-rose-500 hover:underline cursor-pointer"
                 >
                   Reset all filters
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredReports.map((report) => (
                   <ReportCard
                     key={report.id}
@@ -428,101 +486,34 @@ export default function App() {
           </div>
         )}
 
-        {/* MAP TAB */}
-        {activeTab === 'map' && (
-          <div className="space-y-3 sm:space-y-4">
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1">
-              <span className="font-semibold text-slate-800">
-                Displaying {filteredReports.length} geocoded civic hazards across Gurugram
+        {/* MAP VIEW */}
+        {activeDomain !== 'analytics' && activeView === 'map' && (
+          <div className="space-y-3">
+            <div className="p-3 bg-slate-900/80 rounded-2xl border border-slate-800 text-xs flex items-center justify-between">
+              <span className="font-bold text-slate-300">
+                Showing {filteredReports.length} {activeDomain === 'garbage' ? 'Garbage Black Spots' : 'Road Craters & Potholes'}
               </span>
               <span className="text-slate-500">
-                Google Maps layout · Click any pin to inspect MCG officials & amplify
+                Pulsing reticle pins · Click to inspect attributed contractor & verify
               </span>
             </div>
 
-            <div className="h-[500px] sm:h-[650px] w-full">
-              <CivicMap
-                reports={filteredReports}
-                selectedReport={selectedReport}
-                onSelectReport={(rep) => setSelectedReport(rep)}
-              />
-            </div>
+            <CivicMap
+              reports={filteredReports}
+              selectedReport={selectedReport}
+              onSelectReport={(rep) => setSelectedReport(rep)}
+            />
           </div>
         )}
 
-        {/* ANALYTICS & WARD LEADERBOARD TAB */}
-        {activeTab === 'analytics' && (
+        {/* ANALYTICS VIEW */}
+        {activeDomain === 'analytics' && (
           <AnalyticsView reports={reports} />
         )}
+
       </main>
 
-      {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 md:hidden flex items-center justify-around py-2 px-2">
-        <button
-          onClick={() => setActiveTab('feed')}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold ${
-            activeTab === 'feed' ? 'text-rose-600' : 'text-slate-500'
-          }`}
-        >
-          <ListFilter size={18} />
-          <span>Feed</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('map')}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold ${
-            activeTab === 'map' ? 'text-rose-600' : 'text-slate-500'
-          }`}
-        >
-          <Map size={18} />
-          <span>Map</span>
-        </button>
-
-        {/* Center Floating Plus */}
-        <button
-          onClick={handleOpenReportModal}
-          className="w-12 h-12 -mt-5 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-lg shadow-rose-600/30 active:scale-95"
-          aria-label="Report"
-        >
-          <Plus size={22} />
-        </button>
-
-        <button
-          onClick={() => setActiveTab('analytics')}
-          className={`flex flex-col items-center gap-1 text-[10px] font-semibold ${
-            activeTab === 'analytics' ? 'text-rose-600' : 'text-slate-500'
-          }`}
-        >
-          <BarChart3 size={18} />
-          <span>Scorecard</span>
-        </button>
-
-        {user ? (
-          <button
-            onClick={signOut}
-            className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-500"
-          >
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => setIsAuthModalOpen(true)}
-            className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-500"
-          >
-            <LogIn size={18} />
-            <span>Login</span>
-          </button>
-        )}
-      </nav>
-
       {/* Modals */}
-      <NewReportModal
-        isOpen={isNewModalOpen}
-        onClose={() => setIsNewModalOpen(false)}
-        onSubmitReport={handleAddReport}
-      />
-
       <ReportDetailModal
         report={selectedReport}
         onClose={() => setSelectedReport(null)}
@@ -539,7 +530,6 @@ export default function App() {
         userSawThis={selectedReport ? Boolean(seenReports[selectedReport.id]) : false}
       />
 
-      {/* Verification Modal (Proof Photo) */}
       <VerificationModal
         report={verifyingReport}
         isOpen={isVerifyModalOpen}
@@ -550,7 +540,6 @@ export default function App() {
         onSubmitVerification={handleCompleteVerification}
       />
 
-      {/* Dispute Modal (Fake Resolution Contest) */}
       <DisputeModal
         report={disputingReport}
         isOpen={isDisputeModalOpen}
@@ -561,10 +550,17 @@ export default function App() {
         onSubmitDispute={handleCompleteDispute}
       />
 
+      <NewReportModal
+        isOpen={isNewModalOpen}
+        onClose={() => setIsNewModalOpen(false)}
+        onSubmitReport={handleAddReport}
+      />
+
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
       />
+
     </div>
   );
 }
