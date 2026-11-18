@@ -21,6 +21,8 @@ import ReportCard from './components/ReportCard';
 import CivicMap from './components/CivicMap';
 import NewReportModal from './components/NewReportModal';
 import ReportDetailModal from './components/ReportDetailModal';
+import VerificationModal from './components/VerificationModal';
+import DisputeModal from './components/DisputeModal';
 import AuthModal from './components/AuthModal';
 import CiviQLogo from './components/CiviQLogo';
 import { useAuth } from './context/AuthContext';
@@ -41,7 +43,15 @@ export default function App() {
   
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
+  const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
+  const [verifyingReport, setVerifyingReport] = useState(null);
+  const [disputingReport, setDisputingReport] = useState(null);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [seenReports, setSeenReports] = useState(() => {
+    const saved = localStorage.getItem('civiq_seen_reports');
+    return saved ? JSON.parse(saved) : {};
+  });
 
   // Sync to local storage
   useEffect(() => {
@@ -83,11 +93,84 @@ export default function App() {
     }
   };
 
-  const handleToggleResolve = (id) => {
+  // Verification Handler (Before / After Photo Proof)
+  const handleCompleteVerification = (verificationData) => {
+    setReports(prev => prev.map(r => {
+      if (r.id === verificationData.reportId) {
+        return {
+          ...r,
+          status: 'resolved',
+          cleanedImageUrl: verificationData.cleanedImageUrl,
+          verifiedBy: verificationData.verifiedBy,
+          role: verificationData.role,
+          notes: verificationData.notes,
+          verifiedAt: verificationData.verifiedAt,
+          disputed: false
+        };
+      }
+      return r;
+    }));
+
+    if (selectedReport && selectedReport.id === verificationData.reportId) {
+      setSelectedReport(prev => ({
+        ...prev,
+        status: 'resolved',
+        cleanedImageUrl: verificationData.cleanedImageUrl,
+        verifiedBy: verificationData.verifiedBy,
+        role: verificationData.role,
+        notes: verificationData.notes,
+        verifiedAt: verificationData.verifiedAt,
+        disputed: false
+      }));
+    }
+
+    confetti({
+      particleCount: 80,
+      spread: 80,
+      origin: { y: 0.6 }
+    });
+  };
+
+  // Dispute Handler
+  const handleCompleteDispute = (disputeData) => {
+    setReports(prev => prev.map(r => {
+      if (r.id === disputeData.reportId) {
+        return {
+          ...r,
+          status: 'in-progress',
+          disputed: true,
+          disputeReason: disputeData.reason,
+          disputeDescription: disputeData.description,
+          disputedAt: disputeData.disputedAt
+        };
+      }
+      return r;
+    }));
+
+    if (selectedReport && selectedReport.id === disputeData.reportId) {
+      setSelectedReport(prev => ({
+        ...prev,
+        status: 'in-progress',
+        disputed: true,
+        disputeReason: disputeData.reason,
+        disputeDescription: disputeData.description,
+        disputedAt: disputeData.disputedAt
+      }));
+    }
+  };
+
+  // "I Saw This Too" Handler (Reference Core Feature)
+  const handleSawThisToo = (id) => {
+    const nextSeen = !seenReports[id];
+    setSeenReports(prev => {
+      const updated = { ...prev, [id]: nextSeen };
+      localStorage.setItem('civiq_seen_reports', JSON.stringify(updated));
+      return updated;
+    });
+
     setReports(prev => prev.map(r => {
       if (r.id === id) {
-        const nextStatus = r.status === 'resolved' ? 'in-progress' : 'resolved';
-        return { ...r, status: nextStatus };
+        return { ...r, upvotes: nextSeen ? r.upvotes + 1 : Math.max(1, r.upvotes - 1) };
       }
       return r;
     }));
@@ -95,7 +178,7 @@ export default function App() {
     if (selectedReport && selectedReport.id === id) {
       setSelectedReport(prev => ({
         ...prev,
-        status: prev.status === 'resolved' ? 'in-progress' : 'resolved'
+        upvotes: nextSeen ? prev.upvotes + 1 : Math.max(1, prev.upvotes - 1)
       }));
     }
   };
@@ -444,7 +527,38 @@ export default function App() {
         report={selectedReport}
         onClose={() => setSelectedReport(null)}
         onUpvote={handleUpvote}
-        onToggleResolve={handleToggleResolve}
+        onOpenVerify={(rep) => {
+          setVerifyingReport(rep);
+          setIsVerifyModalOpen(true);
+        }}
+        onOpenDispute={(rep) => {
+          setDisputingReport(rep);
+          setIsDisputeModalOpen(true);
+        }}
+        onSawThisToo={handleSawThisToo}
+        userSawThis={selectedReport ? Boolean(seenReports[selectedReport.id]) : false}
+      />
+
+      {/* Verification Modal (Proof Photo) */}
+      <VerificationModal
+        report={verifyingReport}
+        isOpen={isVerifyModalOpen}
+        onClose={() => {
+          setIsVerifyModalOpen(false);
+          setVerifyingReport(null);
+        }}
+        onSubmitVerification={handleCompleteVerification}
+      />
+
+      {/* Dispute Modal (Fake Resolution Contest) */}
+      <DisputeModal
+        report={disputingReport}
+        isOpen={isDisputeModalOpen}
+        onClose={() => {
+          setIsDisputeModalOpen(false);
+          setDisputingReport(null);
+        }}
+        onSubmitDispute={handleCompleteDispute}
       />
 
       <AuthModal
